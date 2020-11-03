@@ -1153,7 +1153,7 @@ Content-Type: application/json
 
 {% include prices.md api_resource="paymentorders" %}
 
-{% include custom-logo.md api_resource="paymentoders" documentation_section=include.documentation_section %}
+{% include custom-logo.md documentation_section=include.documentation_section %}
 
 ### Payer Resource
 

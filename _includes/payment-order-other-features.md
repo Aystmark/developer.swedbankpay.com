@@ -146,7 +146,121 @@ the [Payment Resources][payment-resource] section.
 
 {% if documentation_section == "payment-menu" %}
 
-{% include instrument-mode.md documentation_section=include.documentation_section api_resource="paymentorders" %}
+## Instrument Mode
+
+In "Instrument Mode" the Payment Menu will display only one specific payment
+instrument instead of all configured on your merchant account. The Payment Order
+resource works just like it otherwise would, allowing you to remain largely
+indifferent to the payment instrument in use.
+
+If you do not want to use Swedbank Pay Payment Menu or do have multiple payment
+providers on your site we strongly recommend that you implement the "Instrument
+Mode" functionality. To use this feature you will need to add the `instrument`
+field to the request. This will make the  Swedbank Pay Payment Menu only render
+a single payment instrument. So even if Swedbank Pay is set up to provide more
+than one instrument you will be able to let it only show one at a time.
+
+It is important to use this feature if you want to build your own payment menu.
+In this case you should use the `instrument` field to enforce which payment
+instrument to show. If you have an agreement with Swedbank Pay for both Card and
+Swish/Vipps processing, and the payer chooses either of these instruments, you
+should add the `instrument` parameter with the specific payment instrument. If
+the payer later changes their mind and chooses the other instrument, you can
+make a call to Swedbank Pay to change the instrument on the active payment. This
+is important because we do not allow creating multiple payments with the same
+`orderReference`. To ensure that you can still use the same `orderReference`,
+you should only make one payment for each purchase and change the `instrument`
+to reflect what the payer has chosen in your menu.
+
+The Payment Menu is switched to "Instrument Mode" by providing the request field
+`instrument` as described in the abbreviated example below.
+
+{:.code-view-header}
+**Request**
+
+```http
+POST /psp/paymentorders HTTP/1.1
+Host: {{ page.api_host }}
+Authorization: Bearer <AccessToken>
+Content-Type: application/json
+
+{
+    "paymentorder": {
+        "operation": "Purchase",
+        "currency": "SEK",
+        "amount": 1500,
+        "vatAmount": 375,
+        "description": "Test Purchase",
+        "userAgent": "Mozilla/5.0...",
+        "language": "sv-SE",
+        "instrument": "CreditCard"
+        "generateRecurrenceToken": true,{% if include.documentation_section == "payment-menu" %}
+        "generatePaymentToken": true,{% endif %}
+        "urls": {
+            "hostUrls": [ "https://example.com", "https://example.net" ],
+        }
+    }
+}
+```
+
+{:.code-view-header}
+**Response**
+
+```http
+POST /psp/paymentorders HTTP/1.1
+Host: {{ page.api_host }}
+Authorization: Bearer <AccessToken>
+Content-Type: application/json
+
+{
+    "paymentorder": {
+        "id": "/psp/paymentorders/{{ page.payment_order_id }}",
+        "instrument": "CreditCard"{% if include.documentation_section == "payment-menu" %}
+        "paymentToken" : "{{ page.payment_token }}",{% endif %}
+        "created": "2020-06-22T10:56:56.2927632Z",
+        "updated": "2020-06-22T10:56:56.4035291Z",
+        "operation": "Purchase",
+        "state": "Ready",
+        "currency": "SEK",
+        "amount": 1500,
+        "vatAmount": 375,
+        "orderItems": {
+            "id": "/psp/paymentorders/{{ page.payment_order_id }}/orderitems"
+        }
+    }
+}
+```
+
+It is possible to switch instrument after the `paymentOrder` has been created.
+You can do this with the following `PATCH` request, using Swish as an example.
+
+```http
+PATCH /psp/{{ api_resource }}/paymentorders/{{ page.payment_id }} HTTP/1.1
+Host: {{ page.api_host }}
+Authorization: Bearer <AccessToken>
+Content-Type: application/json
+
+{
+  "paymentorder": {
+    "operation": "SetInstrument",
+    "instrument": "Swish"
+  }
+}
+```
+
+The valid instruments for the `paymentOrder` can be retrieved from the
+`availableInstruments` parameter in the `paymentOrder` response. Using a
+merchant set up with contracts for `Creditcard`, `Swish` and `Invoice`,
+`availableInstruments` will look like this:
+
+```
+        "availableInstruments": [
+            "CreditCard",
+            "Invoice-PayExFinancingSe",
+            "Swish"
+        ],
+```
+
 
 ## Payer Aware Payment Menu
 
@@ -287,7 +401,139 @@ only a subset of all tokens.
 
 {% endif %}
 
-{% include payment-order-operations.md %}
+## Operations
+
+When a payment order resource is created and during its lifetime, it will have
+a set of operations that can be performed on it.
+The state of the payment order resource, what the access token is authorized
+to do, the chosen payment instrument and its transactional states, etc.
+determine the available operations before the initial purchase.
+A list of possible operations and their explanation is given below.
+
+{% include alert.html type="informative" icon="info" header="Deprecated
+Operations." body="Payment instrument-specific operations are passed
+through Payment Order. These can be recognized by not having
+`paymentorder` in the `rel` value. They will be described and marked as
+deprecated in the operation list below." %}
+
+{:.code-view-header}
+**Operations**
+
+```js
+{
+    "paymentorder": {
+        "id": "/psp/paymentorders/{{ page.payment_order_id }}",
+    },
+    "operations": [
+        {
+            "method": "PATCH",
+            "href": "{{ page.api_url }}/psp/paymentorders/{{ page.payment_order_id }}",
+            "rel": "update-paymentorder-abort",
+            "contentType": "application/json"
+        },
+        {
+            "method": "PATCH",
+            "href": "{{ page.api_url }}/psp/paymentorders/{{ page.payment_order_id }}",
+            "rel": "update-paymentorder-updateorder",
+            "contentType": "application/json"
+        },
+        {
+            "method": "GET",
+            "href": "{{ page.front_end_url }}/paymentmenu/{{ page.payment_token }}",
+            "rel": "redirect-paymentorder",
+            "contentType": "text/html"
+        },
+        {
+            "method": "GET",
+            "href": "{{ page.front_end_url }}/paymentmenu/core/scripts/client/px.paymentmenu.client.js?token={{ page.payment_token }}&culture=nb-NO",
+            "rel": "view-paymentorder",
+            "contentType": "application/javascript"
+        },
+        {
+            "method": "POST",
+            "href": "{{ page.api_url }}/psp/paymentorders/{{ page.payment_order_id }}/captures",
+            "rel": "create-paymentorder-capture",
+            "contentType": "application/json"
+        },
+        {
+            "method": "POST",
+            "href": "{{ page.api_url }}/psp/paymentorders/{{ page.payment_order_id }}/cancellations",
+            "rel": "create-paymentorder-cancel",
+            "contentType": "application/json"
+        },
+        {
+            "method": "POST",
+            "href": "{{ page.api_url }}/psp/paymentorders/{{ page.payment_order_id }}/reversals",
+            "rel": "create-paymentorder-reversal",
+            "contentType": "application/json"
+        },
+        {
+            "method": "GET",
+            "href": "{{ page.api_url }}/psp/paymentorders/{{ page.payment_order_id }}/paid",
+            "rel": "paid-paymentorder",
+            "contentType": "application/json"
+        },
+        {
+            "method": "GET",
+            "href": "{{ page.api_url }}/psp/paymentorders/{{ page.payment_order_id }}/failed",
+            "rel": "failed-paymentorder",
+            "contentType": "application/problem+json"
+        },
+        {
+            // Deprecated operation. Do not use!
+            "method": "POST",
+            "href": "{{ page.api_url }}/psp/creditcard/{{ page.payment_id }}/captures",
+            "rel": "create-capture",
+            "contentType": "application/json"
+        },
+        {
+            // Deprecated operation. Do not use!
+            "method": "POST",
+            "href": "{{ page.api_url }}/psp/creditcard/{{ page.payment_id }}/cancellations",
+            "rel": "create-cancel",
+            "contentType": "application/json"
+        },
+        {
+            // Deprecated operation. Do not use!
+            "method": "POST",
+            "href": "{{ page.api_url }}/psp/creditcard/{{ page.payment_id }}/reversals",
+            "rel": "create-reversal",
+            "contentType": "application/json"
+        }
+    ]
+}
+```
+
+{:.table .table-striped}
+| Field         | Type     | Description                                                                        |
+| :------------ | :------- | :--------------------------------------------------------------------------------- |
+| `href`        | `string` | The target URI to perform the operation against.                                   |
+| `rel`         | `string` | The name of the relation the operation has to the current resource.                |
+| `method`      | `string` | `GET`, `PATCH`, `POST`, etc. The HTTP method to use when performing the operation. |
+| `contentType` | `string` | The HTTP content type of the resource referenced in the `href` field.              |
+
+The operations should be performed as described in each response and not as
+described here in the documentation. Always use the `href` and `method` as
+specified in the response by finding the appropriate operation based on its
+`rel` value. The only thing that should be hard coded in the client is the value
+of the `rel` and the request that will be sent in the HTTP body of the request
+for the given operation.
+
+{:.table .table-striped}
+| Operation                         | Description                                                                                                                                                                                                                                                                    |
+| :-------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `update-paymentorder-abort`       | [Aborts][operations] the payment order before any financial transactions are performed.                                                                                                                                                                                        |
+| `update-paymentorder-updateorder` | Updates the order with a change in the `amount` and/or `vatAmount`.                                                                                                                                                                                                            |
+| `redirect-paymentorder`           | Contains the URI that is used to redirect the payer to the Swedbank Pay Payments containing the Payment Menu.                                                                                                                                                               |
+| `view-paymentorder`               | Contains the JavaScript `href` that is used to embed the Payment Menu UI directly on the webshop/merchant site.                                                                                                                                                                |
+| `create-paymentorder-capture`     | The second part of a two-phase transaction where the authorized amount is sent from the payer to the payee. It is possible to do a part-capture on a subset of the authorized amount. Several captures on the same payment are possible, up to the total authorization amount. |
+| `create-paymentorder-cancel`      | Used to cancel authorized and not yet captured transactions. If a cancellation is performed after doing a part-capture, it will only affect the not yet captured authorization amount.                                                                                         |
+| `create-paymentorder-reversal`    | Used to reverse a payment. It is only possible to reverse a payment that has been captured and not yet reversed.                                                                                                                                                               |
+| `paid-paymentorder`               | Returns the information about a paymentorder that has the status `paid`.                                                                                                                                                                                                       |
+| `failed-paymentorder`             | Returns the information about a paymentorder that has the status `failed`.                                                                                                                                                                                                     |
+| `create-capture`                  | **Deprecated operation. Do not use!**                                                                                                                                                                                                                                                     |
+| `create-cancel`                   | **Deprecated operation. Do not use!**                                                                                                                                                                                                                                                     |
+| `create-cancel`                   | **Deprecated operation. Do not use!**                                                                                                                                                                                                                                                     |
 
 {% include payment-state.md %}
 
@@ -1153,7 +1399,53 @@ Content-Type: application/json
 
 {% include prices.md api_resource="paymentorders" %}
 
-{% include custom-logo.md documentation_section=include.documentation_section %}
+## Custom Logo
+
+With permission and activation on your contract, it is possible to replace the
+Swedbank Pay logo in the Payment Menu. See the abbreviated example
+below with the added `logoUrl` in the Payment Order Purchase request.
+
+*   If the configuration is activated and you send in a `logoUrl`, then the
+    SwedbankPay logo is replaced with the logo sent in and the text is changed accordingly.
+
+*   If the configuration is activated and you do not send in a `logoUrl`, then
+    no logo and no text is shown.
+
+*   If the configuration is deactivated, sending in a `logoUrl` has no effect.
+
+{:.code-view-header}
+**Request**
+
+```http
+POST /psp/paymentorders HTTP/1.1
+Host: {{ page.api_host }}
+Authorization: Bearer <AccessToken>
+Content-Type: application/json
+
+{
+    "paymentorder": {
+        "operation": "Purchase",
+        "currency": "SEK",
+        "amount": 1500,
+        "vatAmount": 375,
+        "description": "Test Purchase",
+        "userAgent": "Mozilla/5.0...",
+        "language": "sv-SE",{% if documentation_section == "payment-menu" %}
+        "instrument": "CreditCard"{% endif %}
+        "generateRecurrenceToken": {{ operation_status_bool }},{% if include.documentation_section == "payment-menu" %}
+        "generatePaymentToken": {{ operation_status_bool }},{% endif %}
+        "urls": {
+            "hostUrls": [ "https://example.com", "https://example.net" ],
+            "completeUrl": "https://example.com/payment-completed",
+            "cancelUrl": "https://example.com/payment-canceled",
+            "paymentUrl": "https://example.com/perform-payment",
+            "callbackUrl": "https://api.example.com/payment-callback",
+            "termsOfServiceUrl": "https://example.com/termsandconditoons.pdf",
+            "logoUrl": "https://example.com/logo.png"
+        }
+    }
+}
+```
 
 ### Payer Resource
 
@@ -1217,7 +1509,7 @@ Content-Type: application/json
 | └─➔&nbsp;`countryCode`    | `string` | Country Code for country of residence.                                                         |
 
 {% if include.documentation_section == "checkout" %}
-    {%- include checkin-events.md -%}
+    {%- include checkin-events.md %}
 {% endif  %}
 
 {% include seamless-view-events.md api_resource="paymentorders" documentation_section=include.documentation_section %}

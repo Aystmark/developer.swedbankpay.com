@@ -146,7 +146,7 @@ the [Payment Resources][payment-resource] section.
 
 {% if documentation_section == "payment-menu" %}
 
-{% include intrument-mode.md documentation_section=include.documentation_section api_resource=include.api_resource %}
+{% include instrument-mode.md documentation_section=include.documentation_section api_resource="paymentorders" %}
 
 ## Payer Aware Payment Menu
 
@@ -1217,7 +1217,7 @@ Content-Type: application/json
 | └─➔&nbsp;`countryCode`    | `string` | Country Code for country of residence.                                                         |
 
 {% if include.documentation_section == "checkout" %}
-    {%- include checkin-events.md %}
+    {%- include checkin-events.md -%}
 {% endif  %}
 
 {% include seamless-view-events.md api_resource="paymentorders" documentation_section=include.documentation_section %}

@@ -1283,8 +1283,6 @@ Content-Type: application/json
 
 {% include prices.md api_resource="paymentorders" %}
 
-{% include custom-logo.md documentation_section="payment-menu" %}
-
 ### Payer Resource
 
 The `payer` resource contains payer information related to the payment order.

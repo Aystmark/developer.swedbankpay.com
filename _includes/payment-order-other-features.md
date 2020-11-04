@@ -146,9 +146,6 @@ the [Payment Resources][payment-resource] section.
 
 {% if documentation_section == "payment-menu" %}
 
-{% include instrument-mode.md api_resource="paymentorders"
-documentation_section="payment-menu" %}
-
 ## Payer Aware Payment Menu
 
 To maximize the experience of your payers, you should implement the Payer

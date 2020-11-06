@@ -181,8 +181,8 @@ Other changes:
 *   Bug fixes to Mermaid diagram and alert styling, plus improvements to code
     block styling after the update to [Swedbank Pay Design Guide][design-guide]
     4.5.0.
-*   Added examples with screenshots of the effects of [Merchant Authenticated
-    Consumer][mac-checkout].
+*   Added examples with screenshots of the effects of [Delegated Strong Consumer
+    Authentication][dsca-checkout].
 
 ### Version 1.8.2
 
@@ -194,7 +194,7 @@ Other changes:
 *   Updated [Card Payments Direct][card-direct] to have a correct integration
     flow.
 *   Updated the [main page][frontpage] to be more welcoming.
-*   Updated information on [Merchant Authenticated Consumer][mac-checkout].
+*   Updated information on [Delegated Strong Consumer Authentication][dsca-checkout].
 
 ## 31 Mar 2020
 
@@ -527,7 +527,7 @@ integration and the payer.
 [initiate-consumer-session]: /checkout/checkin#step-1-initiate-session-for-consumer-identification
 [invoice-direct]: /payment-instruments/invoice/direct
 [invoice]: /payment-instruments/invoice
-[mac-checkout]: /checkout/other-features#merchant-authenticated-consumer
+[dsca-checkout]: /checkout/other-features#delegated-strong-consumer-authentication
 [mobile-pay]: /payment-instruments/mobile-pay
 [mobilepay-seamless-view]: /payment-instruments/mobile-pay/seamless-view
 [mobilepay-capture]: /payment-instruments/mobile-pay/capture
